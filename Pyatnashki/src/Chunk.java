@@ -10,24 +10,20 @@ public class Chunk extends JButton {
         return image;
     }
 
-    Chunk(BufferedImage image) {
+    public Chunk(BufferedImage image, int column, int row, int chunkWidth, int chunkHeight) {
         super();
-        this.image = image;
+        this.image = image.getSubimage(column * chunkWidth, row * chunkHeight, chunkWidth, chunkHeight);
+        setIcon(new ImageIcon(this.image));
+        setFocusPainted(false);
+        setBorder(BorderFactory.createEmptyBorder());
     }
 
-    public void setChunk(int index, int chunkWidth, int chunkHeight) {
-        drawChunk(index, chunkWidth, chunkHeight);
-        setIcon(imageToIcon(image, chunkWidth, chunkHeight));
-    }
-
-    private void drawChunk(int index, int chunkWidth, int chunkHeight) {
-        Graphics2D gr = image.createGraphics();
-        gr.drawImage(image, 0, 0, chunkWidth, chunkHeight, chunkWidth * index, chunkHeight * index,
-                chunkWidth * index + chunkWidth, chunkHeight * index + chunkHeight, null);
-        gr.dispose();
-    }
-
-    private ImageIcon imageToIcon(Image image, int width, int height) {
-        return new ImageIcon(image.getScaledInstance(width, height, Image.SCALE_SMOOTH));
+    public Chunk(int chunkWidth, int chunkHeight) {
+        super();
+        setSize(chunkWidth, chunkHeight);
+        image = null;
+        setContentAreaFilled(false);
+        setFocusPainted(false);
+        setBorder(BorderFactory.createEmptyBorder());
     }
 }
