@@ -10,6 +10,10 @@ public class Chunk extends JButton {
         return image;
     }
 
+    public boolean isEmpty() {
+        return image == null;
+    }
+
     public Chunk(BufferedImage image, int column, int row, int chunkWidth, int chunkHeight) {
         super();
         this.image = image.getSubimage(column * chunkWidth, row * chunkHeight, chunkWidth, chunkHeight);
@@ -22,8 +26,8 @@ public class Chunk extends JButton {
         super();
         setSize(chunkWidth, chunkHeight);
         image = null;
-        setContentAreaFilled(false);
         setFocusPainted(false);
         setBorder(BorderFactory.createEmptyBorder());
+        setFont(new java.awt.Font("Arial", Font.ITALIC, 16));
     }
 }

@@ -8,16 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
-
 public class GameFrame extends JFrame {
-
-    private final JFileChooser fc = new JFileChooser();
-    Chunk[] chunks = new Chunk[CHUNKS];
-    private BufferedImage sourceImage;
-
-    private static final String DESCRIPTION = "The app is a kind of sliding puzzle mini game.\nSimply upload " +
-            "an image via" + " [File -> Open] and start playing!\n" + "Designed by: Nikita Marinosyan\n" +
-            "Higher School of Economics, Faculty of Computer Science\n" + "2017";
 
     private static final int ROWS = 4;
     private static final int COLUMNS = 4;
@@ -25,6 +16,16 @@ public class GameFrame extends JFrame {
     private static final int WIDTH = 600;
     private static final int HEIGHT = 640;
     private static final int GAME_FIELD_MEASURE = 600;
+
+    private static final String DESCRIPTION = "The app is a kind of sliding puzzle mini game.\nSimply upload " +
+            "an image via" + " [File -> Open] and start playing!\n" + "Designed by: Nikita Marinosyan\n" +
+            "Higher School of Economics, Faculty of Computer Science\n" + "2017";
+
+    private final JFileChooser fc = new JFileChooser();
+    private BufferedImage sourceImage = null;
+    private int hintsUsed = 0;
+    private int movesMade = 0;
+    private Chunk[] chunks = new Chunk[CHUNKS];
 
     public GameFrame() {
 
@@ -43,12 +44,8 @@ public class GameFrame extends JFrame {
         setResizable(false);
         getContentPane().setBackground(new Color(242, 242, 242));
         getContentPane().setLayout(new GridLayout(4, 4, 3, 3));
+        setMinimumSize(new Dimension(WIDTH, HEIGHT));
 
-        /*---------------------------------- Adding required components to the frame ---------------------------------*/
-        sourceImage = getResizedImageFromFile(new File("res/nova.jpg"), GAME_FIELD_MEASURE,
-                GAME_FIELD_MEASURE);
-        splitIntoChunks(sourceImage);
-        displayChunks();
         pack();
     }
 
@@ -114,6 +111,11 @@ public class GameFrame extends JFrame {
                 // Get new image and split it into chunks
                 sourceImage = getResizedImageFromFile(fc.getSelectedFile(), GAME_FIELD_MEASURE, GAME_FIELD_MEASURE);
                 splitIntoChunks(sourceImage);
+                movesMade = 0;
+                hintsUsed = 0;
+                String info = "Moves made: " + String.valueOf(movesMade) +
+                        "\nHints used: " + String.valueOf(hintsUsed);
+                chunks[CHUNKS - 1].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
 
                 // Make new options available
                 showSrcImg.setEnabled(true);
@@ -133,6 +135,9 @@ public class GameFrame extends JFrame {
         showSrcImg.addActionListener(event -> {
             HintFrame hintFrame = new HintFrame(this, this.getWidth(), this.getHeight(), sourceImage,
                     "Close the hint by pressing OK to continue!");
+            String info = "Moves made: " + String.valueOf(movesMade) +
+                    "\nHints used: " + String.valueOf(++hintsUsed);
+            chunks[indexOfEmptyChunk()].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
             hintFrame.setVisible(true);
             this.setVisible(false);
         });
@@ -155,16 +160,51 @@ public class GameFrame extends JFrame {
             for (int column = 0; column < COLUMNS; column++) {
 
                 // Instantiate a new chunk
-                chunks[count++] = new Chunk(image, column, row, chunkWidth, chunkHeight);
+                chunks[count] = new Chunk(image, column, row, chunkWidth, chunkHeight);
+
+                // Add action listener to enable swapping
+                chunks[count++].addActionListener(e -> {
+
+                    // Get the index of the button which was pressed
+                    int pressedIndex = Arrays.asList(chunks).indexOf(e.getSource());
+
+                    // Find the empty button index
+                    int emptyIndex = indexOfEmptyChunk();
+
+                    // Check if the pressed chunk is near empty chunk
+                    if ((pressedIndex - 1 == emptyIndex) || (pressedIndex + 1 == emptyIndex) ||
+                            (pressedIndex - ROWS == emptyIndex) || (pressedIndex + COLUMNS == emptyIndex)){ // It is near
+
+                        // Swap chunks
+                        Chunk tmp = chunks[pressedIndex];
+                        chunks[pressedIndex] = chunks[emptyIndex];
+                        chunks[emptyIndex] = tmp;
+                        String info = "Moves made: " + String.valueOf(++movesMade) +
+                        "\nHints used: " + String.valueOf(hintsUsed);
+                        chunks[pressedIndex].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
+                    }
+
+                    // Repaint the game field
+                    displayChunks();
+                });
             }
         }
 
         // Create empty chunk
-        chunks[15] = new Chunk(chunkWidth, chunkHeight);
+        chunks[CHUNKS - 1] = new Chunk(chunkWidth, chunkHeight);
     }
 
     private void shuffleChunks() {
+
+        // Shuffle
         Collections.shuffle(Arrays.asList(chunks).subList(0, 15));
+
+        // Set default values to the empty chunk
+        movesMade = 0;
+        hintsUsed = 0;
+        String info = "Moves made: " + String.valueOf(movesMade) +
+                "\nHints used: " + String.valueOf(hintsUsed);
+        chunks[indexOfEmptyChunk()].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
     }
 
     private void displayChunks() {
@@ -176,6 +216,15 @@ public class GameFrame extends JFrame {
         for (int count = 0; count < 16; count++) {
             getContentPane().add(chunks[count]);
         }
+    }
+
+    private int indexOfEmptyChunk() {
+
+        for (int i = 0; i < CHUNKS; i++) {
+            if (chunks[i].isEmpty()) return i;
+        }
+
+        return -1;
     }
 
     private BufferedImage getResizedImageFromFile(File file, int width, int height) {
