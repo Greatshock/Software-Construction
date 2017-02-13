@@ -1,7 +1,10 @@
+package hse.marinosyan;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +36,9 @@ public class GameFrame extends JFrame {
         createMenu();
     }
 
+    /**
+     * Method used to set default values to the frame's properies
+     */
     private void onPaint() {
 
         /*---------------------------------- Set initial values to the frame's properties ----------------------------*/
@@ -49,11 +55,15 @@ public class GameFrame extends JFrame {
         pack();
     }
 
+    /**
+     * Method used to create a menu and it's features
+     */
     private void createMenu() {
         /*-------------------------------------- Creating a menu structure -------------------------------------------*/
 
         // Add menu bar
         JMenuBar menuBar = new JMenuBar();
+        menuBar.setOpaque(true);
         setJMenuBar(menuBar);
 
         // Add menus
@@ -66,12 +76,17 @@ public class GameFrame extends JFrame {
         JMenu help = new JMenu("Help");
         menuBar.add(help);
 
+        JMenu settings = new JMenu("Settings");
+        menuBar.add(settings);
+
         // Add menu items
         JMenuItem open = new JMenuItem("Open");
         file.add(open);
         JMenuItem shuffle = new JMenuItem("Shuffle");
         file.add(shuffle);
         shuffle.setEnabled(false);
+        JMenuItem exit = new JMenuItem("Exit");
+        file.add(exit);
 
         JMenuItem showSrcImg = new JMenuItem("Show source image");
         hint.add(showSrcImg);
@@ -80,18 +95,35 @@ public class GameFrame extends JFrame {
         JMenuItem about = new JMenuItem("About");
         help.add(about);
 
+        JMenu backgroundColor = new JMenu("Background color");
+        settings.add(backgroundColor);
+        JMenuItem blue = new JMenuItem("Blue");
+        backgroundColor.add(blue);
+        JMenuItem cyan = new JMenuItem("Cyan");
+        backgroundColor.add(cyan);
+        JMenuItem gray = new JMenuItem("Gray");
+        backgroundColor.add(gray);
+        JMenuItem green = new JMenuItem("Green");
+        backgroundColor.add(green);
+        JMenuItem magenta = new JMenuItem("Magenta");
+        backgroundColor.add(magenta);
+        JMenuItem orange = new JMenuItem("Orange");
+        backgroundColor.add(orange);
+        JMenuItem yellow = new JMenuItem("Yellow");
+        backgroundColor.add(yellow);
+
         pack();
         /*-------------------------------------- Handling clicks on menu items ---------------------------------------*/
 
         // Handle the event of pressing About menu item
         ImageIcon infoIcon = new ImageIcon("res/infoIcon.png");
-        about.addActionListener(event ->
+        about.addActionListener(e ->
                 JOptionPane.showMessageDialog(about, GameFrame.DESCRIPTION, "About the app",
                         JOptionPane.QUESTION_MESSAGE, infoIcon)
         );
 
         // Handle the event of pressing Open menu item
-        open.addActionListener(event -> {
+        open.addActionListener(e -> {
 
             // Allow user to choose only images
             fc.setAcceptAllFileFilterUsed(false);
@@ -121,9 +153,11 @@ public class GameFrame extends JFrame {
                 showSrcImg.setEnabled(true);
                 shuffle.setEnabled(true);
 
-                // Shuffle chunks and display them
+                // Shuffle chunks and check the solving possibility
                 shuffleChunks();
-                displayChunks();
+
+                // Display chunks
+                repaintChunks();
             }
             else if (returnVal == JFileChooser.ERROR_OPTION) { // Something went wrong
                 JOptionPane.showMessageDialog(fc, "Unable to open selected file!",
@@ -131,8 +165,11 @@ public class GameFrame extends JFrame {
             }
         });
 
+        // Handle event of file->exit
+        exit.addActionListener(e -> dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING)));
+
         // Handle event of using hint
-        showSrcImg.addActionListener(event -> {
+        showSrcImg.addActionListener(e -> {
             HintFrame hintFrame = new HintFrame(this, this.getWidth(), this.getHeight(), sourceImage,
                     "Close the hint by pressing OK to continue!");
             String info = "Moves made: " + String.valueOf(movesMade) +
@@ -143,12 +180,25 @@ public class GameFrame extends JFrame {
         });
 
         // Handle event of pressing shuffle button
-        shuffle.addActionListener(event -> {
+        shuffle.addActionListener(e -> {
             shuffleChunks();
-            displayChunks();
+            repaintChunks();
         });
+
+        // Handle events of setting background color
+        yellow.addActionListener(e -> getContentPane().setBackground(Color.yellow));
+        orange.addActionListener(e -> getContentPane().setBackground(Color.orange));
+        green.addActionListener(e -> getContentPane().setBackground(Color.green));
+        magenta.addActionListener(e -> getContentPane().setBackground(Color.magenta));
+        cyan.addActionListener(e -> getContentPane().setBackground(Color.cyan));
+        blue.addActionListener(e -> getContentPane().setBackground(Color.blue));
+        gray.addActionListener(e -> getContentPane().setBackground(new Color(242, 242, 242)));
     }
 
+    /**
+     * Method used to upload user's image and split it into chunks
+     * @param image - image uploaded by user
+     */
     private void splitIntoChunks(BufferedImage image) {
 
         // Determine the chunk width and height
@@ -160,10 +210,14 @@ public class GameFrame extends JFrame {
             for (int column = 0; column < COLUMNS; column++) {
 
                 // Instantiate a new chunk
-                chunks[count] = new Chunk(image, column, row, chunkWidth, chunkHeight);
+                chunks[count] = new Chunk(image, column, row, chunkWidth, chunkHeight, count);
 
                 // Add action listener to enable swapping
                 chunks[count++].addActionListener(e -> {
+
+                    // Check if the player has already won
+                    // and we don't need to do anything
+                    if (isWon()) return;
 
                     // Get the index of the button which was pressed
                     int pressedIndex = Arrays.asList(chunks).indexOf(e.getSource());
@@ -179,25 +233,41 @@ public class GameFrame extends JFrame {
                         Chunk tmp = chunks[pressedIndex];
                         chunks[pressedIndex] = chunks[emptyIndex];
                         chunks[emptyIndex] = tmp;
-                        String info = "Moves made: " + String.valueOf(++movesMade) +
-                        "\nHints used: " + String.valueOf(hintsUsed);
-                        chunks[pressedIndex].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
+
+                        String info;
+                        if (isWon()) {
+                            info = "YOU WIN!!!" +
+                                    "\nMoves made: " + String.valueOf(++movesMade);
+                            chunks[pressedIndex].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
+                        }
+                        else {
+                            info = "Moves made: " + String.valueOf(++movesMade) +
+                                    "\nHints used: " + String.valueOf(hintsUsed);
+                            chunks[pressedIndex].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
+                        }
                     }
 
                     // Repaint the game field
-                    displayChunks();
+                    repaintChunks();
                 });
             }
         }
 
         // Create empty chunk
-        chunks[CHUNKS - 1] = new Chunk(chunkWidth, chunkHeight);
+        chunks[CHUNKS - 1] = new Chunk(chunkWidth, chunkHeight, CHUNKS - 1);
     }
 
+    /**
+     * Method to shuffle chunks and create new game
+     * which has a solution
+     */
     private void shuffleChunks() {
 
         // Shuffle
-        Collections.shuffle(Arrays.asList(chunks).subList(0, 15));
+        do {
+            Collections.shuffle(Arrays.asList(chunks).subList(0, 15));
+        }
+        while (!isSolvable());
 
         // Set default values to the empty chunk
         movesMade = 0;
@@ -207,7 +277,46 @@ public class GameFrame extends JFrame {
         chunks[indexOfEmptyChunk()].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
     }
 
-    private void displayChunks() {
+    /**
+     * Method to check if this combination
+     * of chunks can be solved or not
+     * @return true - if the combination has a solution, false - otherwise
+     */
+    private boolean isSolvable() {
+        int parity = 0;
+
+        for (int i = 0; i < CHUNKS; i++)
+        {
+            for (int j = i + 1; j < CHUNKS; j++)
+            {
+                if (chunks[i].getNumer() > chunks[j].getNumer())
+                {
+                    parity++;
+                }
+            }
+        }
+
+        return parity % 2 == 0;
+    }
+
+    /**
+     * Method to check if the player has
+     * completed the puzzle
+     * @return true - if the player has completed the puzzle, false - otherwise
+     */
+    private boolean isWon() {
+        for (int i = 0; i < CHUNKS - 1; i++) {
+            if (chunks[i].getNumer() != i) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Method used to update the game frame and
+     * depict all the changes happened to it
+     */
+    private void repaintChunks() {
 
         getContentPane().removeAll();
         getContentPane().revalidate();
@@ -218,6 +327,10 @@ public class GameFrame extends JFrame {
         }
     }
 
+    /**
+     * Method to search the index of the empty chunk
+     * @return index of the empty chunk
+     */
     private int indexOfEmptyChunk() {
 
         for (int i = 0; i < CHUNKS; i++) {
@@ -227,6 +340,13 @@ public class GameFrame extends JFrame {
         return -1;
     }
 
+    /**
+     * Parse the image file and sets it to the defined size
+     * @param file - file with the image
+     * @param width - required width
+     * @param height - require height
+     * @return resized image with defined width and length
+     */
     private BufferedImage getResizedImageFromFile(File file, int width, int height) {
         BufferedImage resizedImage = null;
         try {
