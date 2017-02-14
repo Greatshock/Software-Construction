@@ -116,10 +116,9 @@ public class GameFrame extends JFrame {
         /*-------------------------------------- Handling clicks on menu items ---------------------------------------*/
 
         // Handle the event of pressing About menu item
-        ImageIcon infoIcon = new ImageIcon("res/infoIcon.png");
         about.addActionListener(e ->
                 JOptionPane.showMessageDialog(about, GameFrame.DESCRIPTION, "About the app",
-                        JOptionPane.QUESTION_MESSAGE, infoIcon)
+                        JOptionPane.INFORMATION_MESSAGE)
         );
 
         // Handle the event of pressing Open menu item
@@ -172,9 +171,12 @@ public class GameFrame extends JFrame {
         showSrcImg.addActionListener(e -> {
             HintFrame hintFrame = new HintFrame(this, this.getWidth(), this.getHeight(), sourceImage,
                     "Close the hint by pressing OK to continue!");
-            String info = "Moves made: " + String.valueOf(movesMade) +
-                    "\nHints used: " + String.valueOf(++hintsUsed);
-            chunks[indexOfEmptyChunk()].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
+            if (!isWon())
+            {
+                String info = "Moves made: " + String.valueOf(movesMade) +
+                        "\nHints used: " + String.valueOf(++hintsUsed);
+                chunks[indexOfEmptyChunk()].setText("<html>" + info.replaceAll("\\n", "<br>") + "</html>");
+            }
             hintFrame.setVisible(true);
             this.setVisible(false);
         });
